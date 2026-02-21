@@ -5,7 +5,7 @@ This project develops a personalized movie recommendation system using the Movie
 
 ## Developers
 
-Evan Albrecht
-Stephen Moulton
-Michael Chang
-Connor Patterson 
+- Evan Albrecht
+- Stephen Moulton
+- Michael Chang
+- Connor Patterson 
