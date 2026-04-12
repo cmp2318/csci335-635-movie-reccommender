@@ -101,6 +101,19 @@ def preprocess(ratings_df, movies_df):
 # Train Test Split
 # ============================================================
 
+"""
+splits the merged movie ratings data into training
+and testing sets
+"""
+
+def split_data(movie_ratings_df):
+
+    # 80/20 test split
+    train_data, test_data = train_test_split(movie_ratings_df, 
+                                             test_size=0.20, 
+                                             random_state=35)
+
+    return train_data, test_data
 
 # ============================================================
 # Baseline Model Preparation
