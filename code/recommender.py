@@ -17,8 +17,8 @@ from sklearn.metrics import mean_squared_error, mean_absolute_error
 # Load Dataset
 # ============================================================
 
-RATINGS_FILE = "data/ml-100k/u.data"
-MOVIES_FILE = "data/ml-100k/u.item"
+RATINGS_FILE = "..data/ml-100k/u.data"
+MOVIES_FILE = "..data/ml-100k/u.item"
 
 ratings_cols = ["user_id", "movie_id", "rating", "timestamp"]
 
