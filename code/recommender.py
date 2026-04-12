@@ -185,6 +185,25 @@ def main():
     print(movie_ratings.head())
     print()
 
+    # train test split step
+
+    train_data, test_data = split_data(movie_ratings)
+
+    print("=== Train Test Split ===")
+    print()
+
+    print("Train shape:", train_data.shape)
+    print("Test shape:", test_data.shape)
+    print()
+
+    print("Train top 5:")
+    print(train_data.head())
+    print()
+
+    print("Test top 5:")
+    print(test_data.head())
+    print()
+
     # 1. load ratings and movies
     # 2. preprocess data
     # 3. split into training and testing sets
