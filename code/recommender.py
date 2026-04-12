@@ -75,6 +75,28 @@ def dataset_check(ratings_df, movies_df):
 # Merge and Preprocess Data
 # ============================================================
 
+"""
+merges the ratings data with the movie titles using
+movie_id, then keeps only the columns needed for the
+current stage
+"""
+
+def merge_and_preprocess(ratings_df, movies_df):
+
+    # merge ratings with movie titles
+    movie_ratings = ratings_df.merge(
+        movies_df[["movie_id", "title"]],
+        on="movie_id",
+        how="left"
+    )
+
+    # only relevant columns right now
+    movie_ratings = movie_ratings[
+        ["user_id", "movie_id", "title", "rating", "timestamp"]
+    ]
+
+    return movie_ratings
+
 # ============================================================
 # Train Test Split
 # ============================================================
@@ -136,6 +158,20 @@ def main():
     # dataset check step
 
     dataset_check(ratings, movies)
+
+    # merge and preprocess step
+
+    movie_ratings = merge_and_preprocess(ratings, movies)
+
+    print("=== Merge and Preprocess Data ===")
+    print()
+
+    print("Merged shape:", movie_ratings.shape)
+    print()
+
+    print("Merged preview:")
+    print(movie_ratings.head())
+    print()
 
     # 1. load ratings and movies
     # 2. preprocess data
