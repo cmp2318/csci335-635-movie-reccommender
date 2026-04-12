@@ -119,6 +119,25 @@ def split_data(movie_ratings_df):
 # Baseline Model Preparation
 # ============================================================
 
+"""
+builds the baseline's values with training data,
+including average rating per movie, average user ratings,
+and overall average rating
+"""
+
+def prepare_baseline(train_df):
+
+    # average rating for each movie
+    movie_mean_dict = train_df.groupby("movie_id")["rating"].mean().to_dict()
+
+    # average rating for each user, all their ratings combined and averaged, 
+    # so that the model can learn how that user tends to rate stuff
+    user_mean_dict = train_df.groupby("user_id")["rating"].mean().to_dict()
+
+    # average rating across all data
+    global_mean = train_df["rating"].mean()
+
+    return movie_mean_dict, user_mean_dict, global_mean
 
 # ============================================================
 # Baseline Model
@@ -204,10 +223,18 @@ def main():
     print(test_data.head())
     print()
 
-    # 1. load ratings and movies
-    # 2. preprocess data
-    # 3. split into training and testing sets
-    # 4. complete baseline model first
+    # baseline model preparation step
+
+    movie_mean_dict, user_mean_dict, global_mean = prepare_baseline(train_data)
+
+    print("=== Baseline Model Preparation ===")
+    print()
+
+    print("Number of movie averages:", len(movie_mean_dict))
+    print("Number of user averages:", len(user_mean_dict))
+    print("Global mean:", global_mean)
+    print()
+
     # 5. evaluate baseline model
     # 6. add traditional models
     # 7. add neural model
