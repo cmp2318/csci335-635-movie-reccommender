@@ -143,6 +143,67 @@ def prepare_baseline(train_df):
 # Baseline Model
 # ============================================================
 
+"""
+predicts a rating for one user and one movie using
+the movie average, the user average, or
+the global average if nothing else
+"""
+
+def predict_baseline_rating(user_id, movie_id, movie_mean_dict, 
+                            user_mean_dict, global_mean):
+
+    # use average movie rating if it is in the data
+    if movie_id in movie_mean_dict:
+        return movie_mean_dict[movie_id]
+
+    # if movie was not present, use the user's average rating
+    if user_id in user_mean_dict:
+        return user_mean_dict[user_id]
+
+    # if neither, use the overall average rating
+    return global_mean
+
+
+"""
+makes baseline predictions for every row in the
+test set
+"""
+
+def get_baseline_predictions(test_df, movie_mean_dict, 
+                             user_mean_dict, global_mean):
+
+    predictions = []
+
+    for i, row in test_df.iterrows():
+        prediction = predict_baseline_rating(
+            row["user_id"],
+            row["movie_id"],
+            movie_mean_dict,
+            user_mean_dict,
+            global_mean
+        )
+        predictions.append(prediction)
+
+    return predictions
+
+
+"""
+evaluates the baseline model using RMSE and MAE
+"""
+
+def evaluate_baseline(test_df, predictions):
+
+    actual = test_df["rating"]
+
+    rmse = np.sqrt(mean_squared_error(actual, predictions))
+    mae = mean_absolute_error(actual, predictions)
+
+    print("=== Baseline Model Evaluation ===")
+    print()
+
+    print("RMSE:", rmse)
+    print("MAE:", mae)
+    print()
 
 # ============================================================
 # Traditional Models
@@ -234,6 +295,13 @@ def main():
     print("Number of user averages:", len(user_mean_dict))
     print("Global mean:", global_mean)
     print()
+
+    # baseline model step
+
+    baseline_predictions = get_baseline_predictions(test_data, movie_mean_dict,
+                                                    user_mean_dict, global_mean)
+
+    evaluate_baseline(test_data, baseline_predictions)
 
     # 5. evaluate baseline model
     # 6. add traditional models
