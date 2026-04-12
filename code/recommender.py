@@ -81,7 +81,7 @@ movie_id, then keeps only the columns needed for the
 current stage
 """
 
-def merge_and_preprocess(ratings_df, movies_df):
+def preprocess(ratings_df, movies_df):
 
     # merge ratings with movie titles
     movie_ratings = ratings_df.merge(
@@ -100,7 +100,6 @@ def merge_and_preprocess(ratings_df, movies_df):
 # ============================================================
 # Train Test Split
 # ============================================================
-
 
 
 # ============================================================
@@ -161,7 +160,7 @@ def main():
 
     # merge and preprocess step
 
-    movie_ratings = merge_and_preprocess(ratings, movies)
+    movie_ratings = preprocess(ratings, movies)
 
     print("=== Merge and Preprocess Data ===")
     print()
@@ -169,7 +168,7 @@ def main():
     print("Merged shape:", movie_ratings.shape)
     print()
 
-    print("Merged preview:")
+    print("Merged top 5:")
     print(movie_ratings.head())
     print()
 
