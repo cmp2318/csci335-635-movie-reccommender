@@ -303,7 +303,7 @@ def main():
 
     evaluate_baseline(test_data, baseline_predictions)
 
-    # 5. evaluate baseline model
+    # TODO
     # 6. add traditional models
     # 7. add neural model
     # 8. compare models
