@@ -254,12 +254,11 @@ def predict_knn_rating(user_id, movie_id, normalized_rtgs,
     return prediction
 
 
-def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs):
+def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs, k):
 
     actuals = []
     predictions = []
 
-    k = 5
     indices = find_all_neighbors(knn, normalized_rtgs, k)
 
     for _, r in test_df.iterrows():
@@ -279,6 +278,7 @@ def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs):
     print("RMSE:", rmse)
     print("MAE:", mae)
     print()
+
 
 # ============================================================
 # Neural Network
@@ -378,9 +378,8 @@ def main():
 
     knn, normalized_rtgs, user_movie_rtgs, avg_user_rating = prepare_knn(train_data)
 
-    #predict_knn_rating(1, 1, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs)
-    evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs)
-
+    k = 40
+    evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs, k)
 
     # 7. add neural model
     # 8. compare models
