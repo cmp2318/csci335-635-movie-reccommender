@@ -11,7 +11,7 @@ import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-
+from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
 
 # ============================================================
 # Load Dataset
@@ -209,6 +209,76 @@ def evaluate_baseline(test_df, predictions):
 # Traditional Models
 # ============================================================
 
+def prepare_knn(train_df):
+
+    user_movie_rtgs = train_df.pivot(index="user_id",
+                                     columns="movie_id",
+                                     values="rating")
+
+    avg_user_rating = np.nanmean(user_movie_rtgs.values, axis=1).reshape(-1, 1)
+    normalized_rtgs = user_movie_rtgs.values - avg_user_rating
+    normalized_rtgs = np.nan_to_num(normalized_rtgs, nan=0)
+
+    knn = NearestNeighbors(metric = "cosine", algorithm = "brute")
+    knn.fit(normalized_rtgs)
+
+    return knn, normalized_rtgs, user_movie_rtgs, avg_user_rating
+
+
+def find_all_neighbors(knn, normalized_rtgs, k):
+    indices = knn.kneighbors(normalized_rtgs, n_neighbors=k + 1, return_distance=False)
+    indices = indices[:, 1:]
+    return indices
+
+
+def predict_knn_rating(user_id, movie_id, normalized_rtgs,
+                       avg_user_rtg, user_movie_rtgs, indices, k):
+
+    if user_id not in user_movie_rtgs.index or movie_id not in user_movie_rtgs.columns:
+        if user_id in user_movie_rtgs.index:
+            user_index = user_movie_rtgs.index.get_loc(user_id)
+            return avg_user_rtg[user_index][0]
+        return 0
+
+    user_index = user_movie_rtgs.index.get_loc(user_id)
+    movie_index = user_movie_rtgs.columns.get_loc(movie_id)
+
+    n_indices = indices[user_index]
+
+    sum = 0
+    for neighbor in n_indices:
+        sum += normalized_rtgs[neighbor, movie_index] + avg_user_rtg[neighbor][0]
+
+    prediction = sum / k
+
+    return prediction
+
+
+def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs):
+
+    actuals = []
+    predictions = []
+
+    k = 5
+    indices = find_all_neighbors(knn, normalized_rtgs, k)
+
+    for _, r in test_df.iterrows():
+        actual = r["rating"]
+
+        prediction = predict_knn_rating(r["user_id"], r["movie_id"], normalized_rtgs,
+                                        avg_user_rtg, user_movie_rtgs, indices, k)
+        predictions.append(prediction)
+        actuals.append(actual)
+
+    rmse = np.sqrt(mean_squared_error(actuals, predictions))
+    mae = mean_absolute_error(actuals, predictions)
+
+    print("=== KNN Model Evaluation ===")
+    print()
+
+    print("RMSE:", rmse)
+    print("MAE:", mae)
+    print()
 
 # ============================================================
 # Neural Network
@@ -305,6 +375,13 @@ def main():
 
     # TODO
     # 6. add traditional models
+
+    knn, normalized_rtgs, user_movie_rtgs, avg_user_rating = prepare_knn(train_data)
+
+    #predict_knn_rating(1, 1, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs)
+    evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs)
+
+
     # 7. add neural model
     # 8. compare models
 
