@@ -44,7 +44,7 @@ merges the ratings data with the movie and user
 data needed for the neural network model
 """
 
-def preprocess_neural_data(ratings_df, movies_df, users_df):
+def process_neural_data(ratings_df, movies_df, users_df):
 
     genre_cols = [
         "unknown", "Action", "Adventure", "Animation", "Children", "Comedy",
@@ -81,6 +81,35 @@ def split_data(neural_df):
 # Neural Model Data Preparation
 # ============================================================
 
+"""
+creates one merged dataframe for the neural network by
+combining the ratings data with movie genre data and
+user data, each row represents one user rating along
+with the extra features tied to that movie and user
+"""
+def process_neural_data(ratings_df, movies_df, users_df):
+
+    genre_cols = [
+        "unknown", "Action", "Adventure", "Animation", "Children", "Comedy",
+        "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror",
+        "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"
+    ]
+
+    movie_features = movies_df[["movie_id", "title"] + genre_cols]
+
+    neural_df = ratings_df.merge(
+        movie_features,
+        on="movie_id",
+        how="left"
+    )
+
+    neural_df = neural_df.merge(
+        users_df,
+        on="user_id",
+        how="left"
+    )
+
+    return neural_df
 
 # ============================================================
 # Neural Network Model
@@ -135,5 +164,16 @@ def main():
     print("Datasets loaded")
     print()
 
+    neural_df = preprocess_neural_data(ratings, movies, users)
+
+    print("=== Merge and Preprocess Neural Data ===")
+    print()
+
+    print("Merged shape:", neural_df.shape)
+    print()
+
+    print("Merged top 5:")
+    print(neural_df.head())
+    print()
 if __name__ == "__main__":
     main()
