@@ -40,48 +40,6 @@ user_cols = ["user_id", "age", "gender", "occupation", "zip_code"]
 # ============================================================
 
 """
-merges the ratings data with the movie and user
-data needed for the neural network model
-"""
-
-def process_neural_data(ratings_df, movies_df, users_df):
-
-    genre_cols = [
-        "unknown", "Action", "Adventure", "Animation", "Children", "Comedy",
-        "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror",
-        "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"
-    ]
-
-    neural_df = None
-
-    return neural_df
-
-
-# ============================================================
-# Train Test Split
-# ============================================================
-
-"""
-splits the merged neural model data into training
-and testing sets
-"""
-
-def split_data(neural_df):
-
-    train_data, test_data = train_test_split(
-        neural_df,
-        test_size=0.20,
-        random_state=35
-    )
-
-    return train_data, test_data
-
-
-# ============================================================
-# Neural Model Data Preparation
-# ============================================================
-
-"""
 creates one merged dataframe for the neural network by
 combining the ratings data with movie genre data and
 user data, each row represents one user rating along
@@ -110,6 +68,33 @@ def process_neural_data(ratings_df, movies_df, users_df):
     )
 
     return neural_df
+
+
+# ============================================================
+# Train Test Split
+# ============================================================
+
+"""
+splits the merged neural model data into training
+and testing sets
+"""
+
+def split_data(neural_df):
+
+    train_data, test_data = train_test_split(
+        neural_df,
+        test_size=0.20,
+        random_state=35
+    )
+
+    return train_data, test_data
+
+
+# ============================================================
+# Neural Model Data Preparation
+# ============================================================
+
+
 
 # ============================================================
 # Neural Network Model
@@ -164,7 +149,7 @@ def main():
     print("Datasets loaded")
     print()
 
-    neural_df = preprocess_neural_data(ratings, movies, users)
+    neural_df = process_neural_data(ratings, movies, users)
 
     print("=== Merge and Preprocess Neural Data ===")
     print()
