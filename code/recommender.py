@@ -226,13 +226,14 @@ def prepare_knn(train_df):
 
 
 def find_all_neighbors(knn, normalized_rtgs, k):
-    indices = knn.kneighbors(normalized_rtgs, n_neighbors=k + 1, return_distance=False)
+    distances, indices = knn.kneighbors(normalized_rtgs, n_neighbors=k + 1)
+    distances = distances[:, 1:]
     indices = indices[:, 1:]
-    return indices
+    return distances, indices
 
 
 def predict_knn_rating(user_id, movie_id, normalized_rtgs,
-                       avg_user_rtg, user_movie_rtgs, indices, k):
+                       avg_user_rtg, user_movie_rtgs, indices, distances):
 
     if user_id not in user_movie_rtgs.index or movie_id not in user_movie_rtgs.columns:
         if user_id in user_movie_rtgs.index:
@@ -246,10 +247,14 @@ def predict_knn_rating(user_id, movie_id, normalized_rtgs,
     n_indices = indices[user_index]
 
     sum = 0
-    for neighbor in n_indices:
-        sum += normalized_rtgs[neighbor, movie_index] + avg_user_rtg[neighbor][0]
+    similarity_sum = 0
+    for i in range(n_indices.size):
+        neighbor = n_indices[i]
+        similarity = 1 - distances[user_index, i]
+        sum += similarity * normalized_rtgs[neighbor, movie_index]
+        similarity_sum += abs(similarity)
 
-    prediction = sum / k
+    prediction = (sum / similarity_sum) + avg_user_rtg[user_index][0]
 
     return prediction
 
@@ -259,13 +264,13 @@ def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs, k
     actuals = []
     predictions = []
 
-    indices = find_all_neighbors(knn, normalized_rtgs, k)
+    distances, indices = find_all_neighbors(knn, normalized_rtgs, k)
 
     for _, r in test_df.iterrows():
         actual = r["rating"]
 
         prediction = predict_knn_rating(r["user_id"], r["movie_id"], normalized_rtgs,
-                                        avg_user_rtg, user_movie_rtgs, indices, k)
+                                    avg_user_rtg, user_movie_rtgs, indices, distances)
         predictions.append(prediction)
         actuals.append(actual)
 
