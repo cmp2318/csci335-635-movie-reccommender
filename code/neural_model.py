@@ -106,58 +106,60 @@ def prepare_neural_data(train_data, test_data):
     train_data = train_data.copy()
     test_data = test_data.copy()
 
-    # get unique users movies and occupations from training data
+    # get unique ids from training data that will be encoded
     unique_users = sorted(train_data["user_id"].unique())
     unique_movies = sorted(train_data["movie_id"].unique())
     unique_occupations = sorted(train_data["occupation"].unique())
 
     user_to_index = {}
 
+    # encode user ids to small integers for index access
     for index, user_id in enumerate(unique_users):
         user_to_index[user_id] = index
 
     movie_to_index = {}
 
+    # same for movies
     for index, movie_id in enumerate(unique_movies):
         movie_to_index[movie_id] = index
 
-
     occupation_to_index = {}
 
+    # same for occupations
     for index, occupation in enumerate(unique_occupations):
         occupation_to_index[occupation] = index
 
-    # keep only test rows with known users and known movies
+    # only keep test rows where the user and movie were seen in training
     test_data = test_data[
         test_data["user_id"].isin(user_to_index) &
         test_data["movie_id"].isin(movie_to_index)
     ].copy()
 
-    # encode user ids
+    # turn the original user ids into index values for embedding
     train_data["user_idx"] = train_data["user_id"].map(user_to_index)
     test_data["user_idx"] = test_data["user_id"].map(user_to_index)
 
-    # encode movie ids
+    # turn the original movie ids into index values
     train_data["movie_idx"] = train_data["movie_id"].map(movie_to_index)
     test_data["movie_idx"] = test_data["movie_id"].map(movie_to_index)
 
-    # encode gender
+    # gender encoding, M = 0, F = 1
     train_data["gender_code"] = train_data["gender"].map({"M": 0, "F": 1})
     test_data["gender_code"] = test_data["gender"].map({"M": 0, "F": 1})
 
-    # encode occupation
-
+    # convert occupation text into numeric codes
     train_data["occupation_code"] = train_data["occupation"].map(occupation_to_index)
     test_data["occupation_code"] = test_data["occupation"].map(occupation_to_index)
 
-    # scale age using training data min and max
+    # scale age to a 0 to 1 range
     min_age = train_data["age"].min()
     max_age = train_data["age"].max()
 
     train_data["age_scaled"] = (train_data["age"] - min_age) / (max_age - min_age)
+
     test_data["age_scaled"] = (test_data["age"] - min_age) / (max_age - min_age)
 
-    # build training inputs
+    # inputs that will be passed into the model
     X_train_user = train_data["user_idx"].values
     X_train_movie = train_data["movie_idx"].values
     X_train_genres = train_data[genre_cols].values
@@ -166,7 +168,6 @@ def prepare_neural_data(train_data, test_data):
     X_train_occupation = train_data["occupation_code"].values
     y_train = train_data["rating"].values
 
-    # build testing inputs
     X_test_user = test_data["user_idx"].values
     X_test_movie = test_data["movie_idx"].values
     X_test_genres = test_data[genre_cols].values
@@ -211,6 +212,7 @@ gender inputs to predict movie ratings
 
 def build_neural_model(num_users, num_movies, num_occupations, num_genres):
 
+    # all inputs are information the model will receive
     user_input = Input(shape=(1,), name="user_input")
     movie_input = Input(shape=(1,), name="movie_input")
     occupation_input = Input(shape=(1,), name="occupation_input")
@@ -219,14 +221,17 @@ def build_neural_model(num_users, num_movies, num_occupations, num_genres):
     age_input = Input(shape=(1,), name="age_input")
     gender_input = Input(shape=(1,), name="gender_input")
 
+    # allows the model to learn for each user, movie, and occupation
     user_embedding = Embedding(input_dim=num_users, output_dim=16)(user_input)
     movie_embedding = Embedding(input_dim=num_movies, output_dim=16)(movie_input)
     occupation_embedding = Embedding(input_dim=num_occupations, output_dim=8)(occupation_input)
 
+    # flatten the embedding output into normal vector
     user_vector = Flatten()(user_embedding)
     movie_vector = Flatten()(movie_embedding)
     occupation_vector = Flatten()(occupation_embedding)
 
+    # combine all learned vectors and inputs into one vector
     combined = Concatenate()([
         user_vector,
         movie_vector,
@@ -236,9 +241,11 @@ def build_neural_model(num_users, num_movies, num_occupations, num_genres):
         gender_input
     ])
 
+    # dense layers learn patterns from the combined information
     dense_1 = Dense(64, activation="relu")(combined)
     dense_2 = Dense(32, activation="relu")(dense_1)
 
+    # final output is one predicted rating 
     output = Dense(1, name="rating_output")(dense_2)
 
     model = Model(
@@ -292,6 +299,7 @@ def train_neural_model(model, neural_data):
 # ============================================================
 # Neural Network Evaluation
 # ============================================================
+
 """
 makes predictions on the test set and evaluates the
 neural network using rmse and mae
