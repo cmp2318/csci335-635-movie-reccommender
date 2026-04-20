@@ -9,9 +9,10 @@ File: recommender.py
 import pandas as pd
 import numpy as np
 
+from sklearn.decomposition import TruncatedSVD
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
-from sklearn.neighbors import KNeighborsClassifier, NearestNeighbors
+from sklearn.neighbors import NearestNeighbors
 
 # ============================================================
 # Load Dataset
@@ -209,8 +210,7 @@ def evaluate_baseline(test_df, predictions):
 # Traditional Models
 # ============================================================
 
-def prepare_knn(train_df):
-
+def pivot_normalize(train_df):
     user_movie_rtgs = train_df.pivot(index="user_id",
                                      columns="movie_id",
                                      values="rating")
@@ -218,6 +218,16 @@ def prepare_knn(train_df):
     avg_user_rating = np.nanmean(user_movie_rtgs.values, axis=1).reshape(-1, 1)
     normalized_rtgs = user_movie_rtgs.values - avg_user_rating
     normalized_rtgs = np.nan_to_num(normalized_rtgs, nan=0)
+
+    return normalized_rtgs, user_movie_rtgs, avg_user_rating
+
+"""
+KNN
+"""
+
+def prepare_knn(train_df):
+
+    normalized_rtgs, user_movie_rtgs, avg_user_rating = pivot_normalize(train_df)
 
     knn = NearestNeighbors(metric = "cosine", algorithm = "brute")
     knn.fit(normalized_rtgs)
@@ -278,6 +288,47 @@ def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs, k
     mae = mean_absolute_error(actuals, predictions)
 
     print("=== KNN Model Evaluation ===")
+    print()
+
+    print("RMSE:", rmse)
+    print("MAE:", mae)
+    print()
+
+"""
+Matrix Factorization (SVD)
+"""
+
+def svd(train_df, test_df, n):
+    normalized_rtgs, user_movie_rtgs, avg_user_rtg = pivot_normalize(train_df)
+
+    svd = TruncatedSVD(random_state=35, n_components=n)
+    svd.fit(normalized_rtgs)
+
+    pred_matrix = np.dot(svd.transform(normalized_rtgs), svd.components_)
+
+    actuals = []
+    predictions = []
+
+    for _, r in test_df.iterrows():
+        actual = r["rating"]
+
+        user_id = r["user_id"]
+        movie_id = r["movie_id"]
+
+
+        if user_id in user_movie_rtgs.index and movie_id in user_movie_rtgs.columns:
+
+            user_index = user_movie_rtgs.index.get_loc(user_id)
+            movie_index = user_movie_rtgs.columns.get_loc(movie_id)
+
+            prediction = pred_matrix[user_index, movie_index] + avg_user_rtg[user_index][0]
+            predictions.append(prediction)
+            actuals.append(actual)
+
+    rmse = np.sqrt(mean_squared_error(actuals, predictions))
+    mae = mean_absolute_error(actuals, predictions)
+
+    print("=== Matrix Factorization Model Evaluation ===")
     print()
 
     print("RMSE:", rmse)
@@ -385,6 +436,9 @@ def main():
 
     k = 40
     evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs, k)
+
+    n = 11
+    svd(train_data, test_data, n)
 
     # 7. add neural model
     # 8. compare models
