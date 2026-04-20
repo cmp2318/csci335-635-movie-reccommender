@@ -8,8 +8,10 @@ File: recommender.py
 
 import pandas as pd
 import numpy as np
+from sklearn.cluster import KMeans
 
 from sklearn.decomposition import TruncatedSVD
+from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.neighbors import NearestNeighbors
@@ -210,6 +212,11 @@ def evaluate_baseline(test_df, predictions):
 # Traditional Models
 # ============================================================
 
+"""
+normalizes ratings in the training set so 0 is a users average rating
+returns matrices of normalized ratings, the original ratings, and the average ratings per user
+"""
+
 def pivot_normalize(train_df):
     user_movie_rtgs = train_df.pivot(index="user_id",
                                      columns="movie_id",
@@ -220,6 +227,19 @@ def pivot_normalize(train_df):
     normalized_rtgs = np.nan_to_num(normalized_rtgs, nan=0)
 
     return normalized_rtgs, user_movie_rtgs, avg_user_rating
+
+
+"""
+finds neighbors of all users
+returns all users neighbors' distances from the user and their indices
+"""
+
+def find_all_neighbors(knn, normalized_rtgs, k):
+    distances, indices = knn.kneighbors(normalized_rtgs, n_neighbors=k + 1)
+    distances = distances[:, 1:]
+    indices = indices[:, 1:]
+    return distances, indices
+
 
 """
 KNN
@@ -233,13 +253,6 @@ def prepare_knn(train_df):
     knn.fit(normalized_rtgs)
 
     return knn, normalized_rtgs, user_movie_rtgs, avg_user_rating
-
-
-def find_all_neighbors(knn, normalized_rtgs, k):
-    distances, indices = knn.kneighbors(normalized_rtgs, n_neighbors=k + 1)
-    distances = distances[:, 1:]
-    indices = indices[:, 1:]
-    return distances, indices
 
 
 def predict_knn_rating(user_id, movie_id, normalized_rtgs,
@@ -293,6 +306,7 @@ def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs, k
     print("RMSE:", rmse)
     print("MAE:", mae)
     print()
+
 
 """
 Matrix Factorization (SVD)
@@ -434,9 +448,11 @@ def main():
 
     knn, normalized_rtgs, user_movie_rtgs, avg_user_rating = prepare_knn(train_data)
 
+    # testing resulted in k = 40 having the best rmse/mae values
     k = 40
     evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs, k)
 
+    # testing resulted in n = 11 having the best rmse/mae values
     n = 11
     svd(train_data, test_data, n)
 
