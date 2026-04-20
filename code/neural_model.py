@@ -94,6 +94,35 @@ def split_data(neural_df):
 # Neural Model Data Preparation
 # ============================================================
 
+def prepare_neural_data(train_data, test_data):
+    
+    genre_cols = [
+        "unknown", "Action", "Adventure", "Animation", "Children", "Comedy",
+        "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror",
+        "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"
+    ]
+
+    unique_users = sorted(train_data["user_id"].unique())
+    unique_movies = sorted(train_data["movie_id"].unique())
+
+    user_to_index = {}
+
+    for i, user_id in enumerate(unique_users):
+        user_to_index[user_id] = i;
+    
+
+    movie_to_index = {}
+
+    for i, movie_id in enumerate(unique_movies):
+        movie_to_index[movie_id] = i;   
+
+    test_data = test_data[
+        test_data["user_id"].isin(user_to_index)
+        
+    ]
+
+
+
 
 
 # ============================================================
