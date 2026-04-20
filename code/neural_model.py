@@ -12,6 +12,7 @@ import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 
+from tensorflow.keras.layers import Input, Embedding, Flatten, Concatenate, Dense
 from tensorflow.keras.models import Model
 
 
@@ -95,49 +96,235 @@ def split_data(neural_df):
 # ============================================================
 
 def prepare_neural_data(train_data, test_data):
-    
+
     genre_cols = [
         "unknown", "Action", "Adventure", "Animation", "Children", "Comedy",
         "Crime", "Documentary", "Drama", "Fantasy", "Film-Noir", "Horror",
         "Musical", "Mystery", "Romance", "Sci-Fi", "Thriller", "War", "Western"
     ]
 
+    train_data = train_data.copy()
+    test_data = test_data.copy()
+
+    # get unique users movies and occupations from training data
     unique_users = sorted(train_data["user_id"].unique())
     unique_movies = sorted(train_data["movie_id"].unique())
+    unique_occupations = sorted(train_data["occupation"].unique())
 
     user_to_index = {}
 
-    for i, user_id in enumerate(unique_users):
-        user_to_index[user_id] = i;
-    
+    for index, user_id in enumerate(unique_users):
+        user_to_index[user_id] = index
 
     movie_to_index = {}
 
-    for i, movie_id in enumerate(unique_movies):
-        movie_to_index[movie_id] = i;   
+    for index, movie_id in enumerate(unique_movies):
+        movie_to_index[movie_id] = index
 
+
+    occupation_to_index = {}
+
+    for index, occupation in enumerate(unique_occupations):
+        occupation_to_index[occupation] = index
+
+    # keep only test rows with known users and known movies
     test_data = test_data[
-        test_data["user_id"].isin(user_to_index)
-        
-    ]
+        test_data["user_id"].isin(user_to_index) &
+        test_data["movie_id"].isin(movie_to_index)
+    ].copy()
 
+    # encode user ids
+    train_data["user_idx"] = train_data["user_id"].map(user_to_index)
+    test_data["user_idx"] = test_data["user_id"].map(user_to_index)
 
+    # encode movie ids
+    train_data["movie_idx"] = train_data["movie_id"].map(movie_to_index)
+    test_data["movie_idx"] = test_data["movie_id"].map(movie_to_index)
 
+    # encode gender
+    train_data["gender_code"] = train_data["gender"].map({"M": 0, "F": 1})
+    test_data["gender_code"] = test_data["gender"].map({"M": 0, "F": 1})
+
+    # encode occupation
+
+    train_data["occupation_code"] = train_data["occupation"].map(occupation_to_index)
+    test_data["occupation_code"] = test_data["occupation"].map(occupation_to_index)
+
+    # scale age using training data min and max
+    min_age = train_data["age"].min()
+    max_age = train_data["age"].max()
+
+    train_data["age_scaled"] = (train_data["age"] - min_age) / (max_age - min_age)
+    test_data["age_scaled"] = (test_data["age"] - min_age) / (max_age - min_age)
+
+    # build training inputs
+    X_train_user = train_data["user_idx"].values
+    X_train_movie = train_data["movie_idx"].values
+    X_train_genres = train_data[genre_cols].values
+    X_train_age = train_data["age_scaled"].values
+    X_train_gender = train_data["gender_code"].values
+    X_train_occupation = train_data["occupation_code"].values
+    y_train = train_data["rating"].values
+
+    # build testing inputs
+    X_test_user = test_data["user_idx"].values
+    X_test_movie = test_data["movie_idx"].values
+    X_test_genres = test_data[genre_cols].values
+    X_test_age = test_data["age_scaled"].values
+    X_test_gender = test_data["gender_code"].values
+    X_test_occupation = test_data["occupation_code"].values
+    y_test = test_data["rating"].values
+
+    neural_data = {
+        "X_train_user": X_train_user,
+        "X_train_movie": X_train_movie,
+        "X_train_genres": X_train_genres,
+        "X_train_age": X_train_age,
+        "X_train_gender": X_train_gender,
+        "X_train_occupation": X_train_occupation,
+        "y_train": y_train,
+        "X_test_user": X_test_user,
+        "X_test_movie": X_test_movie,
+        "X_test_genres": X_test_genres,
+        "X_test_age": X_test_age,
+        "X_test_gender": X_test_gender,
+        "X_test_occupation": X_test_occupation,
+        "y_test": y_test,
+        "num_users": len(unique_users),
+        "num_movies": len(unique_movies),
+        "num_genres": len(genre_cols),
+        "num_occupations": len(unique_occupations)
+    }
+
+    return neural_data
 
 
 # ============================================================
 # Neural Network Model
 # ============================================================
 
+"""
+builds a neural network that uses user, movie, and
+occupation embeddings along with genre, age, and
+gender inputs to predict movie ratings
+"""
+
+def build_neural_model(num_users, num_movies, num_occupations, num_genres):
+
+    user_input = Input(shape=(1,), name="user_input")
+    movie_input = Input(shape=(1,), name="movie_input")
+    occupation_input = Input(shape=(1,), name="occupation_input")
+
+    genre_input = Input(shape=(num_genres,), name="genre_input")
+    age_input = Input(shape=(1,), name="age_input")
+    gender_input = Input(shape=(1,), name="gender_input")
+
+    user_embedding = Embedding(input_dim=num_users, output_dim=16)(user_input)
+    movie_embedding = Embedding(input_dim=num_movies, output_dim=16)(movie_input)
+    occupation_embedding = Embedding(input_dim=num_occupations, output_dim=8)(occupation_input)
+
+    user_vector = Flatten()(user_embedding)
+    movie_vector = Flatten()(movie_embedding)
+    occupation_vector = Flatten()(occupation_embedding)
+
+    combined = Concatenate()([
+        user_vector,
+        movie_vector,
+        occupation_vector,
+        genre_input,
+        age_input,
+        gender_input
+    ])
+
+    dense_1 = Dense(64, activation="relu")(combined)
+    dense_2 = Dense(32, activation="relu")(dense_1)
+
+    output = Dense(1, name="rating_output")(dense_2)
+
+    model = Model(
+        inputs=[
+            user_input,
+            movie_input,
+            occupation_input,
+            genre_input,
+            age_input,
+            gender_input
+        ],
+        outputs=output
+    )
+
+    model.compile(
+        optimizer="adam",
+        loss="mse",
+        metrics=["mae"]
+    )
+
+    return model
+
 # ============================================================
 # Neural Network Training
 # ============================================================
 
+"""
+trains the neural network model on the training data
+"""
+
+def train_neural_model(model, neural_data):
+
+    history = model.fit(
+        [
+            neural_data["X_train_user"],
+            neural_data["X_train_movie"],
+            neural_data["X_train_occupation"],
+            neural_data["X_train_genres"],
+            neural_data["X_train_age"],
+            neural_data["X_train_gender"]
+        ],
+        neural_data["y_train"],
+        epochs=10,
+        batch_size=64,
+        validation_split=0.10,
+        verbose=1
+    )
+
+    return history
 
 # ============================================================
 # Neural Network Evaluation
 # ============================================================
+"""
+makes predictions on the test set and evaluates the
+neural network using rmse and mae
+"""
 
+def evaluate_neural_model(model, neural_data):
+
+    predictions = model.predict(
+        [
+            neural_data["X_test_user"],
+            neural_data["X_test_movie"],
+            neural_data["X_test_occupation"],
+            neural_data["X_test_genres"],
+            neural_data["X_test_age"],
+            neural_data["X_test_gender"]
+        ]
+    )
+
+    predictions = predictions.flatten()
+
+    actual = neural_data["y_test"]
+
+    rmse = np.sqrt(mean_squared_error(actual, predictions))
+    mae = mean_absolute_error(actual, predictions)
+
+    print("Neural Network Evaluation:")
+    print()
+
+    print("RMSE:", rmse)
+    print("MAE:", mae)
+    print()
+
+    return predictions
 
 # ============================================================
 # Recommendation Output
@@ -175,19 +362,39 @@ def main():
         names=user_cols
     )
 
-    print("Datasets loaded")
-    print()
-
     neural_df = process_neural_data(ratings, movies, users)
+    train_data, test_data = split_data(neural_df)
 
-    print("=== Merge and Preprocess Neural Data ===")
+    print("Train shape:", train_data.shape)
+    print("Test shape:", test_data.shape)
+
     print()
 
-    print("Merged shape:", neural_df.shape)
+    neural_data = prepare_neural_data(train_data, test_data)
+
     print()
 
-    print("Merged top 5:")
-    print(neural_df.head())
+    print("Number of users:", neural_data["num_users"])
+    print("Number of movies:", neural_data["num_movies"])
+    print("Number of genres:", neural_data["num_genres"])
+    print("Number of occupations:", neural_data["num_occupations"])
     print()
+
+    model = build_neural_model(
+        neural_data["num_users"],
+        neural_data["num_movies"],
+        neural_data["num_occupations"],
+        neural_data["num_genres"]
+    )
+
+    print("Neural Network Model:")
+    print()
+    model.summary()
+    print()
+
+    history = train_neural_model(model, neural_data)
+
+    predictions = evaluate_neural_model(model, neural_data)
+
 if __name__ == "__main__":
     main()
