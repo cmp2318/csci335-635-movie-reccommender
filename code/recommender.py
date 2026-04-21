@@ -15,6 +15,8 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.neighbors import NearestNeighbors
+from sklearn.linear_model import LinearRegression
+
 
 # ============================================================
 # Load Dataset
@@ -349,6 +351,51 @@ def svd(train_df, test_df, n):
     print("MAE:", mae)
     print()
 
+"""
+Linear Regression Model
+"""
+
+def lr(train_df, test_df):
+    movie_mean = train_df.groupby("movie_id")["rating"].mean().to_dict()
+    user_mean = train_df.groupby("user_id")["rating"].mean().to_dict()
+    global_mean = train_df["rating"].mean()
+
+    def get_features(df):
+        features = []
+        targets = []
+
+        for _, in df.iterrows():
+
+            user_id = ["user_id"]
+            movie_id = ["movie_id"]
+            rating = ["rating"]
+
+            user_avg = user_mean.get(user_id, global_mean)
+
+            movie_avg = movie_mean.get(movie_id, global_mean)
+
+            features.append([user_avg, movie_avg])
+            targets.append(rating)
+
+        return np.array(features), np.array(targets)
+
+    X_train, y_train = get_features(train_df)
+    X_test, y_test = get_features(test_df)
+
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+
+    preds = model.predict(X_test)
+
+    rmse = np.sqrt(mean_squared_error(y_test, preds))
+    mae = mean_absolute_error(y_test, preds)
+
+    print("=== Linear Regression Model Evaluation ===")
+    print()
+    print("RMSE:", rmse)
+    print("MAE:", mae)
+    print()
+
 
 # ============================================================
 # Neural Network
@@ -455,6 +502,8 @@ def main():
     # testing resulted in n = 11 having the best rmse/mae values
     n = 11
     svd(train_data, test_data, n)
+
+    lr(train_data, test_data)
 
     # 7. add neural model
     # 8. compare models
