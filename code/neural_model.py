@@ -332,7 +332,7 @@ def evaluate_neural_model(model, neural_data):
     print("MAE:", mae)
     print()
 
-    return predictions
+    return predictions, rmse, mae
 
 # ============================================================
 # Recommendation Output
@@ -402,7 +402,9 @@ def main():
 
     history = train_neural_model(model, neural_data)
 
-    predictions = evaluate_neural_model(model, neural_data)
+    predictions, rmse, mae = evaluate_neural_model(model, neural_data)
+
+    return rmse, mae
 
 if __name__ == "__main__":
     main()

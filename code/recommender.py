@@ -8,10 +8,8 @@ File: recommender.py
 
 import pandas as pd
 import numpy as np
-from sklearn.cluster import KMeans
 
 from sklearn.decomposition import TruncatedSVD
-from sklearn.linear_model import LogisticRegression
 from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error
 from sklearn.neighbors import NearestNeighbors
@@ -36,6 +34,7 @@ movie_cols = [
 
 ratings = None
 movies = None
+
 
 # ============================================================
 # Dataset Check
@@ -76,6 +75,7 @@ def dataset_check(ratings_df, movies_df):
     print(movies_df.isnull().sum())
     print()
 
+
 # ============================================================
 # Merge and Preprocess Data
 # ============================================================
@@ -102,6 +102,7 @@ def preprocess(ratings_df, movies_df):
 
     return movie_ratings
 
+
 # ============================================================
 # Train Test Split
 # ============================================================
@@ -119,6 +120,7 @@ def split_data(movie_ratings_df):
                                              random_state=35)
 
     return train_data, test_data
+
 
 # ============================================================
 # Baseline Model Preparation
@@ -143,6 +145,7 @@ def prepare_baseline(train_df):
     global_mean = train_df["rating"].mean()
 
     return movie_mean_dict, user_mean_dict, global_mean
+
 
 # ============================================================
 # Baseline Model
@@ -209,6 +212,9 @@ def evaluate_baseline(test_df, predictions):
     print("RMSE:", rmse)
     print("MAE:", mae)
     print()
+
+    return rmse, mae
+
 
 # ============================================================
 # Traditional Models
@@ -309,6 +315,8 @@ def evaluate_knn(test_df, knn, normalized_rtgs, avg_user_rtg, user_movie_rtgs, k
     print("MAE:", mae)
     print()
 
+    return rmse, mae
+
 
 """
 Matrix Factorization (SVD)
@@ -351,6 +359,9 @@ def svd(train_df, test_df, n):
     print("MAE:", mae)
     print()
 
+    return rmse, mae
+
+
 """
 Linear Regression Model
 """
@@ -392,32 +403,18 @@ def lr(train_df, test_df):
 
     print("=== Linear Regression Model Evaluation ===")
     print()
+
     print("RMSE:", rmse)
     print("MAE:", mae)
     print()
 
+    return rmse, mae
 
-# ============================================================
-# Neural Network
-# ============================================================
-
-
-
-# ============================================================
-# Recommendation Output
-# ============================================================
-
-
-
-# ============================================================
-# Model Comparison
-# ============================================================
 
 def main():
 
     global ratings
     global movies
-
 
     # process the u.item and u.data file with pandas
 
@@ -433,13 +430,10 @@ def main():
     print("Datasets loaded")
     print()
 
-
     # dataset check step
-
     dataset_check(ratings, movies)
 
     # merge and preprocess step
-
     movie_ratings = preprocess(ratings, movies)
 
     print("=== Merge and Preprocess Data ===")
@@ -453,7 +447,6 @@ def main():
     print()
 
     # train test split step
-
     train_data, test_data = split_data(movie_ratings)
 
     print("=== Train Test Split ===")
@@ -472,7 +465,6 @@ def main():
     print()
 
     # baseline model preparation step
-
     movie_mean_dict, user_mean_dict, global_mean = prepare_baseline(train_data)
 
     print("=== Baseline Model Preparation ===")
@@ -484,30 +476,27 @@ def main():
     print()
 
     # baseline model step
-
     baseline_predictions = get_baseline_predictions(test_data, movie_mean_dict,
                                                     user_mean_dict, global_mean)
 
-    evaluate_baseline(test_data, baseline_predictions)
+    bl_rmse, bl_mae = evaluate_baseline(test_data, baseline_predictions)
 
-    # TODO
-    # 6. add traditional models
 
     knn, normalized_rtgs, user_movie_rtgs, avg_user_rating = prepare_knn(train_data)
 
     # testing resulted in k = 40 having the best rmse/mae values
     k = 40
-    evaluate_knn(test_data, knn, normalized_rtgs, avg_user_rating, user_movie_rtgs, k)
+    knn_rmse, knn_mae = evaluate_knn(test_data, knn, normalized_rtgs,
+                                     avg_user_rating, user_movie_rtgs, k)
 
     # testing resulted in n = 11 having the best rmse/mae values
     n = 11
-    svd(train_data, test_data, n)
+    svd_rmse, svd_mae = svd(train_data, test_data, n)
 
-    lr(train_data, test_data)
+    lr_rmse, lr_mae = lr(train_data, test_data)
 
-    # 7. add neural model
-    # 8. compare models
 
+    return bl_rmse, bl_mae, knn_rmse, knn_mae, svd_rmse, svd_mae, lr_rmse, lr_mae
 
 
 if __name__ == "__main__":
