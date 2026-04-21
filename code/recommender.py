@@ -364,11 +364,11 @@ def lr(train_df, test_df):
         features = []
         targets = []
 
-        for _, in df.iterrows():
+        for _, row in df.iterrows():
 
-            user_id = ["user_id"]
-            movie_id = ["movie_id"]
-            rating = ["rating"]
+            user_id = row["user_id"]
+            movie_id = row["movie_id"]
+            rating = row["rating"]
 
             user_avg = user_mean.get(user_id, global_mean)
 
